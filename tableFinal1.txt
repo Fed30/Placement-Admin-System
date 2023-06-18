@@ -1,0 +1,239 @@
+/* Version with shorter names for certain contraints due to an error (identifier too long) 
+    Tables:
+    - Speaker_Expertise
+    - Offer_Details
+    - University_Ambassador
+*/
+
+CREATE TABLE Company (
+    ID NUMBER(6) NOT NULL,
+    Name VARCHAR2(50) NOT NULL,
+    Address VARCHAR2(50) NOT NULL,
+    City VARCHAR2(20) NOT NULL,
+    Postcode VARCHAR2(10) NOT NULL,	
+    Details VARCHAR2(500),
+    Start_Date DATE,
+    End_Date Date,
+
+    CONSTRAINT pk_Company_ID PRIMARY KEY (ID)
+);
+
+CREATE TABLE Topic (
+	ID NUMBER(6) NOT NULL,
+	Name VARCHAR2(50) NOT NULL,
+	Abbreviation VARCHAR2(5) NOT NULL,
+	
+	CONSTRAINT pk_Topic_ID PRIMARY KEY (ID)
+);
+
+CREATE TABLE Speaker (
+    ID NUMBER(6) NOT NULL,
+	Name VARCHAR2(15) NOT NULL,
+	Surname	VARCHAR2(40) NOT NULL,
+	Mobile_Phone NUMBER(11) NOT NULL UNIQUE,
+	Email VARCHAR2(60) NOT NULL UNIQUE,
+	DOB DATE NOT NULL,
+    ID_Company NUMBER(6)  NOT NULL,
+
+    CONSTRAINT pk_Speaker_ID PRIMARY KEY (ID),
+	CONSTRAINT Speaker_Email CHECK(Email LIKE '%_@__%.__%'),
+	CONSTRAINT Speaker_Name CHECK (REGEXP_LIKE (Name, '^[a-zA-Z]+$')),
+	CONSTRAINT Speaker_Surname CHECK (REGEXP_LIKE (Surname, '^[a-zA-Z]+$')),
+    CONSTRAINT fk_Speaker_ID_Company FOREIGN KEY (ID_Company) REFERENCES Company(ID)
+);
+
+CREATE TABLE Speaker_Expertise (
+	ID NUMBER(6) NOT NULL,
+	ID_Topic NUMBER(6) NOT NULL,
+	ID_Speaker NUMBER(6) NOT NULL,
+	
+	CONSTRAINT pk_Speaker_E_ID PRIMARY KEY (ID),
+	CONSTRAINT fk_Speaker_E_ID_Topic FOREIGN KEY (ID_Topic) REFERENCES Topic(ID),
+	CONSTRAINT fk_Speaker_E_ID_Speaker FOREIGN KEY (ID_Speaker) REFERENCES Speaker(ID)
+);
+
+CREATE TABLE Campus (
+	ID NUMBER(6) NOT NULL,
+	Name VARCHAR2(50) NOT NULL, 
+	Address VARCHAR2(30) NOT NULL, 										
+	Postcode VARCHAR(10) NOT NULL,
+
+    CONSTRAINT pk_Campus_ID PRIMARY KEY (ID)
+);
+
+CREATE TABLE Room (
+    ID NUMBER(6) NOT NULL,
+    Capacity NUMBER(6) NOT NULL,
+    Room_Number NUMBER(6) NOT NULL,
+    ID_Campus NUMBER(6) NOT NULL,
+
+    CONSTRAINT pk_Room_ID PRIMARY KEY (ID),
+    CONSTRAINT fk_Room_ID_Campus FOREIGN KEY (ID_Campus) REFERENCES Campus(ID)
+);
+
+CREATE TABLE Department (
+    ID NUMBER(6) NOT NULL,
+    Name VARCHAR2(50) NOT NULL,
+    ID_Room NUMBER(6) NOT NULL,
+
+    CONSTRAINT pk_Department_ID PRIMARY KEY (ID),
+    CONSTRAINT fk_Department_ID_Room FOREIGN KEY (ID_Room) REFERENCES Room(ID)
+);
+
+CREATE TABLE Staff (
+    ID NUMBER(8) NOT NULL,
+    Name VARCHAR2(15) NOT NULL,
+    Surname VARCHAR2(40) NOT NULL,
+    Role VARCHAR2(15) NOT NULL,
+    Email VARCHAR2(60) UNIQUE NOT NULL,
+    Mobile_Phone NUMBER(11) UNIQUE NOT NULL,
+    isActive NUMBER(1,0) NOT NULL,
+    DOB DATE NOT NULL,
+    ID_Department NUMBER(6) NOT NULL, 
+
+    CONSTRAINT pk_Staff_ID PRIMARY KEY (ID),
+    CONSTRAINT Staff_Email CHECK (Email LIKE '%_@__%.__%'),
+    CONSTRAINT fk_Staff_ID_Room FOREIGN KEY (ID_Department) REFERENCES Department(ID)
+);
+
+CREATE TABLE Student(
+    ID NUMBER(10) NOT NULL,
+    Name VARCHAR2(15) NOT NULL,
+    Surname VARCHAR2(40) NOT NULL,
+    DOB DATE NOT NULL,
+    Email VARCHAR2(60) UNIQUE NOT NULL,
+    Mobile_Phone NUMBER(11) UNIQUE NOT NULL,
+
+    CONSTRAINT pk_Student_ID PRIMARY KEY (ID),
+    CONSTRAINT Student_Name CHECK(REGEXP_LIKE (Name, '^[A-Za-z''-]+$')),
+    CONSTRAINT Student_Surname CHECK(REGEXP_LIKE (Surname, '^[A-Za-z''-]+$')),
+    CONSTRAINT Student_Email CHECK(Email LIKE '_%@__%.__%')
+);
+
+CREATE TABLE Business_Offer (
+    ID NUMBER(6) NOT NULL,
+    Type CHAR(2) NOT NULL,
+    Status CHAR(1) NOT NULL,
+    Vacancies NUMBER(2) NOT NULL,
+    Start_Date DATE NOT NULL,
+    End_Date DATE NOT NULL,
+    ID_Company NUMBER(6) NOT NULL,
+    ID_Staff NUMBER(8) NOT NULL,
+
+    CONSTRAINT pk_Business_Offer_ID PRIMARY KEY (ID),
+    CONSTRAINT Business_Offer_Type CHECK(Type IN('PL', 'IN', 'AP')),
+    CONSTRAINT Business_Offer_Status CHECK(Status IN('O', 'C')),
+    CONSTRAINT Business_Offer_End_Date CHECK(End_Date > Start_Date),
+    CONSTRAINT fk_Business_Offer_ID_Company FOREIGN KEY (ID_Company) REFERENCES Company(ID),
+    CONSTRAINT fk_Business_Offer_ID_Staff FOREIGN KEY (ID_Staff) REFERENCES Staff(ID)
+);
+
+CREATE TABLE Supervisor(
+    ID NUMBER(6) NOT NULL,
+    Name VARCHAR2(15) NOT NULL,
+    Surname VARCHAR2(40) NOT NULL,
+    Mobile_Phone NUMBER(11) UNIQUE NOT NULL,
+    Email VARCHAR2(60) UNIQUE NOT NULL,
+    ID_Company NUMBER(6) NOT NULL,
+    
+    CONSTRAINT pk_Surpervisor_ID PRIMARY KEY (ID),
+    CONSTRAINT Supervisor_Name CHECK(REGEXP_LIKE (Name, '^[A-Za-z''-]+$')),
+    CONSTRAINT Supervisor_Surname CHECK(REGEXP_LIKE (Surname, '^[A-Za-z''-]+$')),
+    CONSTRAINT Supervisor_Email CHECK(Email LIKE '_%@__%.__%'),
+    CONSTRAINT fk_Supervisor_ID_Company FOREIGN KEY (ID_Company) REFERENCES Company(ID)
+);
+
+CREATE TABLE Offer_Details(
+    ID NUMBER(6) NOT NULL,
+    Start_Date DATE NOT NULL,
+    End_Date DATE,
+    Outcome VARCHAR2(1) NOT NULL,
+    ID_Supervisor NUMBER(6) NOT NULL,
+    ID_Student NUMBER(10) NOT NULL,
+    ID_Business_Offer NUMBER(6) NOT NULL,
+
+    CONSTRAINT pk_Offer_Details_ID PRIMARY KEY (ID),
+    CONSTRAINT Offer_Detail_End_Date CHECK(End_Date > Start_Date),
+    CONSTRAINT Offer_Detail_Outcome CHECK(Outcome IN('O', 'F', 'S')),
+    CONSTRAINT fk_Offer_D_ID_Supervisor FOREIGN KEY (ID_Supervisor) REFERENCES Supervisor(ID),
+    CONSTRAINT fk_Offer_D_ID_Student FOREIGN KEY (ID_Student) REFERENCES Student(ID),
+    CONSTRAINT fk_Offer_D_ID_Business_Offer FOREIGN KEY (ID_Business_Offer) REFERENCES Business_Offer(ID)
+);
+
+CREATE TABLE University_Ambassador(
+    ID NUMBER(6) NOT NULL,
+    Start_Date DATE NOT NULL,
+    End_Date DATE,
+    ID_Company NUMBER(6) NOT NULL,
+    ID_Staff NUMBER(8) NOT NULL,
+
+    CONSTRAINT pk_University_A_ID PRIMARY KEY (ID),
+    CONSTRAINT fk_University_A_ID_Company FOREIGN KEY (ID_Company) REFERENCES Company(ID),
+    CONSTRAINT fk_University_A_ID_Staff FOREIGN KEY (ID_Staff) REFERENCES Staff(ID)
+);
+
+CREATE TABLE Contact_Log(
+	ID NUMBER(6) NOT NULL, 										
+	Date_Time DATE NOT NULL,
+	Reason VARCHAR2(500) NOT NULL,
+	ID_Ambassador NUMBER(6) NOT NULL, 
+	ID_Speaker NUMBER(6) NOT NULL,
+
+    CONSTRAINT pk_Contact_Log_ID PRIMARY KEY (ID),
+    CONSTRAINT fk_Contact_Log_ID_Ambassador FOREIGN KEY (ID_Ambassador) REFERENCES University_Ambassador(ID),
+    CONSTRAINT fk_Contact_Log_ID_Speaker FOREIGN KEY (ID_Speaker) REFERENCES Speaker(ID)
+);
+
+CREATE TABLE Request(
+	ID NUMBER(6) NOT NULL,
+	Name VARCHAR2(50) NOT NULL,
+	Type CHAR(2) NOT NULL,
+    Status CHAR(2) NOT NULL,
+	Details	VARCHAR2(500),
+	Proposed_Date DATE NOT NULL,
+	ID_Topic NUMBER(6) NOT NULL,
+	ID_Staff NUMBER(8) NOT NULL,
+
+    CONSTRAINT pk_Request_ID PRIMARY KEY (ID),
+    CONSTRAINT Request_Type CHECK(Type IN('WK', 'GS', 'GT', 'CO')),
+    CONSTRAINT Request_Status CHECK(Status IN('P', 'A', 'D')),
+    CONSTRAINT fk_Request_ID_Topic FOREIGN KEY (ID_Topic) REFERENCES Topic(ID),
+    CONSTRAINT fk_Request_ID_Staff FOREIGN KEY (ID_Staff) REFERENCES Staff(ID)
+);
+
+CREATE TABLE Event (
+    ID NUMBER(6) NOT NULL,
+    Name VARCHAR2(50) NOT NULL,
+    Details VARCHAR2(500) NOT NULL,
+    Date_time DATE NOT NULL,
+    ID_Location NUMBER(6) NOT NULL,
+    ID_Speaker NUMBER(6) NOT NULL,
+    ID_Request NUMBER(6) NOT NULL,
+
+    CONSTRAINT pk_Event_ID PRIMARY KEY (ID),
+    CONSTRAINT fk_Event_ID_Location FOREIGN KEY (ID_Location) REFERENCES Room(ID),
+    CONSTRAINT fk_Event_ID_Request FOREIGN KEY (ID_Request) REFERENCES Request(ID),
+    CONSTRAINT fk_Event_ID_Speaker FOREIGN KEY (ID_Speaker) REFERENCES Speaker(ID)
+);
+
+CREATE TABLE Attendance ( 
+    ID NUMBER(6) NOT NULL, 
+    Show_Up NUMBER(1,0) NOT NULL,
+    Feedback CHAR(1) NOT NULL, 
+    Comments VARCHAR2(500), 
+    Is_Anonymous NUMBER(1,0) NOT NULL, 
+    ID_Student NUMBER(10) NOT NULL, 
+    ID_Event NUMBER(6) NOT NULL,
+
+    CONSTRAINT pk_Attendance_ID PRIMARY KEY (ID),
+    CONSTRAINT Attendance_Feedback CHECK(Feedback IN('P', 'A', 'G','E')),
+    CONSTRAINT fk_Attendance_ID_Student FOREIGN KEY (ID_Student) REFERENCES Student(ID),
+    CONSTRAINT fk_Attendance_ID_Event FOREIGN KEY (ID_Event) REFERENCES Event(ID)
+);
+
+SELECT 
+
+/*Index Creation for isAnonymous Column in Attendace Table*/
+
+create index "ATTENDANCE_ISANONYMOUS_IDX"
+on "ATTENDANCE" ( "IS_ANONYMOUS" );

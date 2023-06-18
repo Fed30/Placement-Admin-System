@@ -1,0 +1,17 @@
+DROP TABLE Attendance;
+DROP TABLE Event;
+DROP TABLE Request;
+DROP TABLE Contact_Log;
+DROP TABLE University_Ambassador;
+DROP TABLE Offer_Details;
+DROP TABLE Supervisor;
+DROP TABLE Business_Offer;
+DROP TABLE Student;
+DROP TABLE Staff;
+DROP TABLE Department;
+DROP TABLE Room;
+DROP TABLE Campus;
+DROP TABLE Speaker_Expertise;
+DROP TABLE Topic;
+DROP TABLE Speaker;
+DROP TABLE Company;

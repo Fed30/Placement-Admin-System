@@ -1,0 +1,145 @@
+/* The admin manager should be able to retrieve information about who supervised the event and which staff member of the university organised the project */
+
+SELECT  SUBSTR(Staff.Name,1,1) ||' ' || Staff.Surname AS "STAFF NAME",Event.Name AS "EVENT",Topic.Name AS "TOPIC",SUBSTR(Speaker.Name,1,1) ||' ' || Speaker.Surname AS "SPEAKER", Company.Name AS "COMPANY", TO_CHAR(Event.Date_time,'DD-MON-YY')AS "DATE"
+FROM Request JOIN Staff ON (Staff.ID = Request.ID_Staff)
+        JOIN Topic ON (Topic.ID = Request.ID_Topic)
+        JOIN Event ON (Event.ID_Request = Request.ID)
+		JOIN Speaker ON (Speaker.ID = Event.ID_Speaker)
+        JOIN Company ON (Company.ID = Speaker.ID_Company)
+WHERE Staff.isActive IN('1') AND Request.Status IN('A')
+ORDER BY Event.Name;
+
+/* The system should be able to keep track of the student's placements, which of them were successful and who is supervising it*/
+
+SELECT Student.ID AS "STUDENT ID", SUBSTR(Student.Name,1,1) ||' ' ||Student.Surname AS "STUDENT NAME", DECODE(Business_Offer.Type,'PL','Placement') AS "OFFER TYPE", 
+    TO_CHAR(Offer_Details.Start_Date,'DD-MON-YY') AS "START DATE",TO_CHAR(Offer_Details.End_Date,'DD-MON-YY') AS "END DATE",
+    DECODE(Offer_Details.Outcome,'S','Successfull','F','Failed','O','Ongoing') AS "OUTCOME",SUBSTR(Supervisor.Name,1,1) ||' '||Supervisor.Surname AS "SUPERVISOR",
+    Company.Name AS "COMPANY NAME"
+FROM Business_Offer JOIN Offer_Details ON (Business_Offer.ID = Offer_Details.ID_Business_Offer)
+	JOIN Student  ON (Student.ID = Offer_Details.ID_Student)
+	JOIN Supervisor  ON (Supervisor.ID = Offer_Details.ID_Supervisor)
+	JOIN Company  ON (Company.ID = Supervisor.ID_Company)
+WHERE Offer_Details.Outcome IN('S','F','O') AND Business_Offer.Type IN('PL') AND Business_Offer.Status IN('C','O')
+ORDER BY Outcome;
+
+/* The system should allow the administrator to generate reports on the school's interactions with the businesses and the local community, and lecturer’s efforts at developing new links with industry. */
+SELECT Staff.ID AS "STAFF ID", Staff.Name || ' ' || Staff.Surname AS "NAME", CASE
+        WHEN University_Ambassador.ID_Staff IS NULL THEN '-'
+        WHEN University_Ambassador.ID_Staff IS NOT NULL THEN 'YES'
+    END "AMBASSADOR" , T1.Evnt AS "EVENTS ORGANISED", T2.Contacts AS "CONTACTS MADE" FROM Staff
+FULL OUTER JOIN University_Ambassador ON University_Ambassador.ID_Staff = Staff.ID
+LEFT JOIN
+ (
+    SELECT Request.ID_Staff, COUNT(*) Evnt
+    FROM Request
+    WHERE Request.Status ='A'
+    GROUP BY Request.ID_Staff
+ ) T1
+    ON T1.ID_Staff = Staff.ID
+ LEFT JOIN 
+ (
+    SELECT University_Ambassador.ID_Staff Ambassador, COUNT(*) Contacts
+    FROM Contact_Log
+    JOIN University_Ambassador ON Contact_Log.ID_Ambassador = University_Ambassador.ID
+    GROUP BY University_Ambassador.ID_Staff
+ ) T2
+    ON T2.Ambassador = Staff.ID
+
+/* The admin manager should be able to retrieve information about which student has been granted for a project. */
+
+SELECT Student.ID AS "STUDENT ID",Student.Name ||' ' || Student.Surname AS "NAME", Student.Email, Company.Name AS "COMPANY",
+    CASE
+        WHEN (Business_Offer.Type LIKE 'AP') THEN 'Apprenticeship'
+        WHEN (Business_Offer.Type LIKE 'IN') THEN 'Internship'
+        WHEN (Business_Offer.Type LIKE 'PL') THEN 'Placement'
+    END "TYPE OF OFFER",
+    Offer_Details.Start_Date AS "START DATE", Offer_Details.End_Date AS "END DATE"  
+FROM Student 
+JOIN Offer_Details ON ID_Student = Student.ID
+JOIN Business_Offer ON Business_Offer.ID = Offer_Details.ID_Business_Offer
+JOIN Company ON Business_Offer.ID_Company = Company.ID
+WHERE Outcome LIKE 'O';
+
+/* The system should allow data storage and retrieval in terms of event details and room allocations in order to avoid duplications, by having a clear timetable and schedule. */
+
+SELECT Event.Date_Time AS "DATE", Event.Name "EVENT", Speaker.Name ||' '|| Speaker.Surname AS "GUEST SPEAKER",
+Company.Name "COMPANY", Topic.Name "TOPIC", Event.Details "DETAILS",
+Room.Room_Number as "ROOM NUMBER",Room.Capacity "CAPACITY", Campus.Name AS "CAMPUS", Staff.Name || ' ' || Staff.Surname AS "CURATOR"
+FROM Event JOIN Room ON Event.ID_Location = Room.ID
+JOIN Request ON Event.ID_Request = Request.ID
+JOIN Topic ON Request.ID_Topic = Topic.ID
+JOIN Campus ON Room.ID_Campus = Campus.ID
+JOIN Staff ON Request.ID_Staff = Staff.ID
+JOIN Speaker ON Event.ID_Speaker = Speaker.ID
+JOIN Company ON Speaker.ID_Company = Company.ID
+WHERE Event.Date_Time >= SYSDATE
+ORDER BY Event.Date_Time;
+
+/*The marketing manager should be able to retrieve the status of the project.*/
+
+SELECT Company.Name AS "COMPANY", Business_Offer.ID AS "BUSINESS OFFER ID",
+    CASE
+        WHEN (Type LIKE 'PL') THEN 'Placement'
+        WHEN (Type LIKE 'IN') THEN 'Intership'
+        WHEN (Type LIKE 'AP') THEN 'Apprenticeship'
+    END "PROJECT TYPE", 
+    Vacancies,
+    TO_CHAR(Business_Offer.Start_Date,'DD-MON-YY') AS "BUSINESS OFFER START DATE",
+    TO_CHAR(Business_Offer.End_Date,'DD-MON-YY') AS "BUSINESS OFFER END DATE",
+    CASE
+        WHEN (Business_Offer.Status LIKE 'C') THEN 'Closed'
+        WHEN (Business_Offer.Status LIKE 'O') THEN 'Opened'
+    END "PROJECT STATUS",
+    Offer_Details.ID AS "OFFER DETAILS ID", 
+    TO_CHAR(Offer_Details.Start_Date,'DD-MON-YY') AS "OFFER DETAILS START DATE",
+    TO_CHAR(Offer_Details.End_Date,'DD-MON-YY') AS "OFFER DETAILS END DATE",
+    CASE
+        WHEN (Outcome LIKE 'O') THEN 'Ongoing'
+        WHEN (Outcome LIKE 'F') THEN 'Fail'
+        WHEN (Outcome LIKE 'S') THEN 'Successful'
+    END "OUTCOME"
+FROM Offer_Details
+JOIN Business_Offer ON Business_Offer.ID = Offer_Details.ID_Business_Offer
+JOIN Company ON Company.ID = Business_Offer.ID_Company
+WHERE Business_Offer.Status IN('C', 'O') AND Outcome IN('O', 'F', 'S')
+ORDER BY Business_Offer.ID
+
+/*The system enables the attendance and feedback reporting for each event, to define a successful event and determine if could be repeated the following year.*/
+
+SELECT Company.Name AS "COMPANY", 
+    Event.Name || ' (' || Topic.Abbreviation || ')' AS "EVENT NAME(TOPIC)", 
+    TO_CHAR(Event.Date_Time,'DD-MON-YY') AS "EVENT DATE", 
+    Event.ID AS "EVENT ID",
+    sum(Show_Up) as "ATTENDANCE",
+    CASE
+        WHEN (Feedback LIKE 'P') THEN 'Poor'
+        WHEN (Feedback LIKE 'A') THEN 'Average'
+        WHEN (Feedback LIKE 'G') THEN 'Good'
+        WHEN (Feedback LIKE 'E') THEN 'Excellent'
+    END "FEEDBACK",
+    CASE
+        WHEN (Is_Anonymous LIKE '1') THEN NULL
+        WHEN (Is_Anonymous LIKE '0') THEN Student.ID       
+    END "STUDENT"   
+FROM Event
+JOIN Attendance ON Attendance.ID_Event = Event.ID
+JOIN Student ON Student.ID = Attendance.ID_Student
+JOIN Speaker ON Speaker.ID = Event.ID_Speaker
+JOIN Company ON Company.ID = Speaker.ID_Company
+JOIN Request ON Request.ID = Event.ID_Request
+JOIN Topic ON Topic.ID = Request.ID_Topic
+WHERE Feedback IN('P', 'A', 'G', 'E')
+GROUP BY Event.ID, Feedback, Event.Name, Company.Name, Event.Date_Time, Is_Anonymous, Student.ID, Topic.Abbreviation
+ORDER BY Event.Date_Time, Event.ID, Feedback
+
+/*The database should be able to store and retrieve information regarding the hosted events and representants from all parts involved (business and university)*/
+
+SELECT TO_CHAR(Event.Date_Time,'DD-MON-YY HH:MM:SS') AS "DATE", Event.Name AS "EVENT NAME", Topic.Name || ' (' || Topic.Abbreviation || ')' AS "TOPIC",  Event.Details, STAFF.NAME|| ' ' ||STAFF.SURNAME AS "STAFF NAME",
+SPEAKER.NAME|| ' '||SPEAKER.SURNAME AS "SPEAKER NAME", COMPANY.NAME AS "COMPANY NAME"
+FROM Event
+JOIN Request ON Event.ID_Request = Request.ID
+JOIN Topic ON Topic.ID = Request.ID_Topic
+JOIN Speaker ON Speaker.ID = Event.ID_SPEAKER
+JOIN COMPANY ON COMPANY.ID = SPEAKER.ID_COMPANY
+JOIN STAFF ON STAFF.ID = Request.ID_STAFF
+WHERE Event.Date_Time  < SYSDATE;
